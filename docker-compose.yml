@@ -1,0 +1,70 @@
+services:
+  mysql:
+    image: mysql:latest
+    restart: no
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: messaging
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+  rabbitmq:
+    image: rabbitmq:latest
+    restart: no
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: root
+      RABBITMQ_DEFAULT_PASS: secret
+    configs:
+      - source: rabbitmq-plugins
+        target: /etc/rabbitmq/enabled_plugins
+    volumes:
+      - rabbitmq-lib:/var/lib/rabbitmq/
+      - rabbitmq-log:/var/log/rabbitmq
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    restart: no
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: secret
+      MONGO_INITDB_DATABASE: messagesdb
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  producer-service:
+    build: ./producer
+    restart: no
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+      - rabbitmq
+  consumer-service:
+    build: ./consumer
+    restart: no
+    ports:
+      - "8081:8081"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+
+configs:
+  rabbitmq-plugins:
+    content: "[rabbitmq_management]."
+
+volumes:
+  rabbitmq-lib:
+  rabbitmq-log:
+  mongodb_data:
+  mysql_data:
