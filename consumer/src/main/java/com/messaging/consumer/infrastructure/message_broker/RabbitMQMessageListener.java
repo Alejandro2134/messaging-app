@@ -13,7 +13,7 @@ public class RabbitMQMessageListener {
         this.processMessageUseCase = processMessageUseCase;
     }
 
-    @RabbitListener(queues = "message.queue")
+    @RabbitListener(queues = "messages.queue")
     public void receiveMessage(Message message) {
         processMessageUseCase.execute(message);
     }
