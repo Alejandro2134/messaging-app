@@ -5,8 +5,8 @@
 La solución implementa una arquitectura desacoplada basada en microservicios para el procesamiento de mensajes.
 
 Se compone de dos servicios principales:
--	Producer Service: recibe mensajes vía API REST, valida la información, persiste metadatos iniciales en MySQL y publica el evento en RabbitMQ.
--	Consumer Service: consume mensajes desde RabbitMQ, procesa la información y persiste el resultado en MongoDB.
+-	Producer Service: recibe mensajes vía API REST, valida la información y publica el evento en RabbitMQ, este servicio llena la base de datos con 5 resgistros de origenes entre los cuales estan: 3001111111, 3002222222, 3003333333, 3004444444 y 3005555555, si intentas producir un mensaje con otro origen te dara un error, también cuenta con un método de auth basica donde debes poner un usuario y una contraseña los cuales son: admin y admin123 respectivamente.
+-	Consumer Service: consume mensajes desde RabbitMQ, procesa la información y persiste el resultado en MongoDB incluso si se incumple la regla de negocio donde un destino solo puede recibir 3 mensajes cada 24 horas y tiene disponible un endpoint para obtener los mensajes que se enviaron a un destino concreto.
 
 ### Flujo general
 
@@ -20,20 +20,9 @@ Tecnologías utilizadas
 -	Docker Compose
 -	Swagger/OpenAPI
 
-### Arquitectura aplicada
-
-Se utilizó Clean Architecture, separando:
--	domain
--	application / use cases
--	infrastructure
--	controllers
--	repositories
-
-Esto permite desacoplamiento, facilidad de pruebas y mantenibilidad.
-
 ## Ejecución del proyecto
 
-1. Construcción de artefactos
+1. Construcción de artefactos tanto en el ./producer como en el ./consumer
 
 ``` ./mvnw clean package ```
    
@@ -50,10 +39,6 @@ Esto permite desacoplamiento, facilidad de pruebas y mantenibilidad.
 
 - Producer: /swagger-ui.html
 - Consumer: /swagger-ui.html
-
-## Estado actual de la solución
-
-Actualmente existe un error al levantar el contenedor de MongoDB que por cuestiones de tiempo me fue imposible solucionar, por lo que esto afecta la ejecución y la correcta funcionalidad del servicio consumer.
 
 ## Respuestas cuestionario
 1.
@@ -72,7 +57,7 @@ Actualmente existe un error al levantar el contenedor de MongoDB que por cuestio
    - DTO Pattern: Se crearon DTOs con sus validaciones para mantener una separación de capas, donde en las capas mas externas se realizan validaciones sin afectar el funcionamiento de los casos de uso
    - Dependency Injection: Gracias a Spring Boot y al concepto de inversión del control se facilita el uso de la inyección de dependencias sin tener que instancias clases de forma explicita
    
-3. Par asegurar esto, se tuvieron en cuenta cosas como la separación de servicios en servicios pequeños y especificos, reduciendo así la cantidad de recursos usados en el servicio, dividiendo la carga, de modo que si un servicio es mas utilizado que otro, solo este va a tener que escalar, mientras que el otro puede funcionar con los recursos que tiene a su disposición. También gracias a los procesos asincronos es posible responder a un usuario de forma rapida y sin tener que esperar una respuesta del otro servicio, de modo que se entregan respuestas de forma rapida y liberando así recursos para nuevas peticiones.
+3. Para asegurar esto, se tuvieron en cuenta cosas como la separación de servicios en servicios pequeños y especificos, reduciendo así la cantidad de recursos usados en el servicio, dividiendo la carga, de modo que si un servicio es mas utilizado que otro, solo este va a tener que escalar, mientras que el otro puede funcionar con los recursos que tiene a su disposición. También gracias a los procesos asincronos es posible responder a un usuario de forma rapida y sin tener que esperar una respuesta del otro servicio, de modo que se entregan respuestas de forma rapida y liberando así recursos para nuevas peticiones.
    
 4. Creo que en este tipo de sistemas es crucial asegurar el correcto manejo de los datos, por lo que par el servicio que lee los mensajes en la cola considero importante aplicar alguna politica de reintentos en caso de que el servicio este caido, para asegurar así la integridad de los datos con respecto a las acciones que realizan los usuarios, también puede ser importante agregr identificadores a cada uno de estos mensajes para no procesar el mismo mensaje mas de una vez. Por último también se podría agregar versionamiento a la API, en caso de que haya una evolución natural en la API sin afectar cosas que ya esten en funcionamiento.
    
